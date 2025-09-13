@@ -7,10 +7,26 @@ from django.views.generic.edit import CreateView
 from .forms import JobForm
 from .models import Job, JobApplicant
 
+
 # Create your views here.
 
 class JobCreateView(CreateView):
-    pass
+    model = Job
+    form_class = JobForm
+    template_name = 'jobs/job_create.html'
+    success_url = reverse_lazy('jobs:job_list_view')
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super().form_valid(form)
+
+    def handle_no_permission(self):
+        return redirect('jobs:job_list_view')
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+
 def job_list_view(request):
     jobs = Job.objects.all()
     query = request.GET.get('q', None)
@@ -23,7 +39,8 @@ def job_list_view(request):
     context = {
         'jobs': jobs,
     }
-    return render(request, 'jobs/job_list.html')
+    return render(request, 'jobs/job_list.html', context)
+
 
 def job_detail_view(request, pk):
     try:
@@ -34,10 +51,10 @@ def job_detail_view(request, pk):
             return render(request, 'auth/401.html', status=401)
     except Job.DoesNotExist:
         return render(request, 'auth/404.html', status=404)
-        
+
     applicants = JobApplicant.objects.filter(job=job)
     has_applied = JobApplicant.objects.filter(job=job, user=user).exists() if user.is_authenticated else False
-    
+
     context = {
         'job': job,
         'user': user,
@@ -45,6 +62,7 @@ def job_detail_view(request, pk):
         'has_applied': has_applied,
     }
     return render(request, 'jobs/job_detail.html', context)
+
 
 class JobUpdateView(UpdateView):
     form_class = JobForm
@@ -74,6 +92,7 @@ class JobDeleteView(DeleteView):
         if not user.is_authenticated:
             raise PermissionError("You do not have permission to delete this job.")
         return job
+
 
 def job_apply(request, pk):
     job = get_object_or_404(Job, pk=pk)

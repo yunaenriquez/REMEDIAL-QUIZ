@@ -1,5 +1,17 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="container">
+    <h3 class="mb-4">Edit Post</h3>
 
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="form-group mt-3">
+            <button type="submit" class="btn btn-primary">Update Post</button>
+            <a href="{% url 'posts:post-detail' post.slug %}" class="btn btn-secondary ms-3">Cancel</a>
+        </div>
+    </form>
+</div>
 {% endblock %}

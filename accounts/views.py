@@ -7,6 +7,7 @@ from django.db import IntegrityError
 from .models import Profile, CustomUser
 from jobs.models import Job, JobApplicant
 
+
 # Create your views here.
 
 def signup_view(request):
@@ -36,7 +37,7 @@ def signup_view(request):
         if len(username) < 3:
             messages.error(request, 'Username must be at least 3 characters long.')
             return render(request, 'auth/signup.html', {'email': email, 'username': username})
-        
+
         if not username.isalnum():
             messages.error(request, 'Username can only contain letters and numbers.')
             return render(request, 'auth/signup.html', {'email': email, 'username': username})
@@ -66,7 +67,7 @@ def signup_view(request):
                 username=username,
                 password=password
             )
-            
+
             messages.success(request, 'Account created successfully! Please sign in.')
             return redirect('auth:signin')
 
@@ -74,6 +75,8 @@ def signup_view(request):
             messages.error(request, 'An error occurred while creating your account. Please try again.')
             return render(request, 'auth/signup.html', {'email': email, 'username': username})
     return render(request, 'auth/signup.html')
+
+
 def signin_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -88,8 +91,46 @@ def signin_view(request):
             messages.error(request, 'Invalid email or password')
     return render(request, 'auth/signin.html')
 
+
 def profile_create_view(request):
-    pass
+    if not request.user.is_authenticated:
+        messages.error(request, 'Please sign in first.')
+        return redirect('auth:signin')
+
+    if Profile.objects.filter(user=request.user).exists():
+        messages.info(request, 'You already have a profile.')
+        return redirect('auth:profile_view')
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        bio = request.POST.get('bio', '').strip()
+        profile_picture = request.FILES.get('profile_picture')
+
+        if not all([first_name, last_name, bio, profile_picture]):
+            messages.error(request, 'All fields are required.')
+            return render(request, 'auth/profile_create.html', {
+                'first_name': first_name,
+                'last_name': last_name,
+                'bio': bio,
+            })
+
+        try:
+            Profile.objects.create(
+                user=request.user,
+                first_name=first_name,
+                last_name=last_name,
+                bio=bio,
+                profile_picture=profile_picture
+            )
+            messages.success(request, 'Profile created successfully!')
+            return redirect('auth:profile_view')
+        except Exception as e:
+            messages.error(request, f'Error creating profile: {e}')
+
+    return render(request, 'auth/profile_create.html')
+
+
 def profile_view(request):
     if not request.user.is_authenticated:
         messages.error(request, 'Please sign in first.')
@@ -116,6 +157,7 @@ def profile_view(request):
     else:
         messages.info(request, 'Profile does not exist.')
         return redirect('auth:profile_create')
+
 
 def logout_view(request):
     logout(request)
